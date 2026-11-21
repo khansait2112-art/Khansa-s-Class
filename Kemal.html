@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dhuha Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE occasion: a morning adventure game for SMA students, cheerful but respectful
+   IDEA a Dhuha morning over a madrasah; the sun climbs and the sky clears as missions are won
+   PICTURE full-bleed SVG scene (sky, sun, masjid, hills) behind sticker-style game cards; fog for the final boss
+   COLOUR morning gold sky to blue, deep masjid green ink, saffron sun, coral for wrong, leaf green for right
+   TYPE Baloo 2 display + Nunito text, Amiri for ayat
+   LAYOUT one centred 540px column: HUD on top, challenge card in the middle, help buttons at the foot; same on phone */
+:root{color-scheme:light;--ink:#123a2c;--sun:#ffb020;--sun2:#ffd25e;--bad:#ef5b5b;--ok:#22a35a;--paper:#fffaf0;--mute:#4f6a5f;--dome:#1f7a55}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%;margin:0;overflow:hidden}
+[hidden]{display:none!important}
+body{background:#ffe2a8;color:var(--ink);font:16px/1.5 Nunito,system-ui,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+#scene{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+#sunG{transition:transform 1.6s cubic-bezier(.3,.8,.3,1)}
+#day{transition:opacity 1.6s}
+.cloud{animation:drift 26s ease-in-out infinite alternate}
+.cloud.b{animation-duration:34s;animation-delay:-9s}
+@keyframes drift{to{transform:translateX(90px)}}
+#fog{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0;transition:opacity .9s;background:radial-gradient(circle at 15% 75%,rgba(255,255,255,.95),transparent 42%),radial-gradient(circle at 85% 35%,rgba(236,240,246,.95),transparent 46%),radial-gradient(circle at 50% 100%,rgba(255,255,255,.9),transparent 50%),linear-gradient(rgba(214,222,232,.6),rgba(250,250,252,.8))}
+#app{position:relative;z-index:2;height:100%;max-width:540px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;overflow:hidden;overflow:clip}
+.screen{display:none;flex:1;flex-direction:column;gap:12px;min-height:0}
+.screen.on{display:flex;animation:pop .35s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(12px)}}
+.card{background:var(--paper);border:3px solid var(--ink);border-radius:22px;box-shadow:0 5px 0 var(--ink);padding:16px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;padding:12px 18px;font:800 19px/1 'Baloo 2',Nunito,sans-serif;border:3px solid var(--ink);border-radius:16px;background:var(--sun);color:var(--ink);box-shadow:0 4px 0 var(--ink);cursor:pointer}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.alt{background:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 6px var(--ink)}
+h1,h2,h3{font-family:'Baloo 2',Nunito,sans-serif;line-height:1.05;letter-spacing:-.02em;margin:0;text-wrap:balance}
+svg{display:block}
+.ic{width:22px;height:22px;fill:currentColor;flex:none}
+.mute{width:44px;height:44px;flex:none;display:grid;place-items:center;border:3px solid var(--ink);border-radius:14px;background:#fff;box-shadow:0 3px 0 var(--ink);cursor:pointer}
+.row{display:flex;align-items:center;gap:10px}
+.sp{flex:1}
+/* title */
+.logo{text-align:center;padding:18px 16px 16px}
+.logo h1{font-size:clamp(44px,12vw,60px);font-weight:800;color:var(--ink)}
+.logo h1 span{color:#e07b00}
+.logo p{margin:2px 0 12px;font:700 19px/1.2 'Baloo 2',sans-serif;color:var(--dome)}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.chip{font:800 13px/1 Nunito,system-ui,sans-serif;padding:7px 10px;border-radius:999px;background:#fff3d6;border:2px solid var(--ink)}
+.materi{margin:12px 0 0;font-size:14.5px;color:var(--mute)}
+.materi b{color:var(--ink)}
+.foot{display:grid;gap:10px}
+details.how{padding:0}
+details.how summary{cursor:pointer;list-style:none;padding:14px 16px;font:800 17px/1.2 'Baloo 2',sans-serif;display:flex;justify-content:space-between}
+details.how summary::-webkit-details-marker{display:none}
+details.how summary::after{content:"+";font-size:22px;line-height:.8}
+details.how[open] summary::after{content:"–"}
+details.how ul{margin:0;padding:0 18px 14px 34px;font-size:14.5px;max-height:38vh;overflow:auto}
+details.how li{margin:4px 0}
+/* form */
+.field{display:grid;gap:4px;margin-bottom:12px}
+.field label{font-weight:800;font-size:15px}
+.field input{font:700 16px Nunito,system-ui,sans-serif;padding:12px 14px;border:3px solid var(--ink);border-radius:14px;background:#fff;color:var(--ink);width:100%}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.err{color:#c0392b;font-weight:800;font-size:14px;min-height:20px;margin:0 0 6px}
+/* dialogue */
+.dlg{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:start}
+.av{width:64px;height:64px;border-radius:50%;border:3px solid var(--ink);overflow:hidden;background:#fff}
+.who{font-size:13px;color:var(--mute);font-weight:700}
+.who b{font:800 17px/1.1 'Baloo 2',sans-serif;color:var(--ink);display:block}
+.say{margin:6px 0 0;font-size:16.5px;font-weight:600;min-height:4.5em;cursor:pointer}
+/* map */
+.maphead{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.clock{font:800 30px/1 'Baloo 2',sans-serif}
+.maphead small{display:block;font-size:13px;color:var(--mute);font-weight:700}
+.sunbar{height:10px;border-radius:9px;background:#ffe9b8;border:2px solid var(--ink);margin-top:6px;overflow:hidden}
+.sunbar i{display:block;height:100%;background:linear-gradient(90deg,#ffb020,#ffd25e);transition:width 1s}
+.maplist{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px 8px}
+.maplist>.stop:first-child{margin-top:auto}
+.stop{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;width:100%;padding:10px 12px;border:3px solid var(--ink);border-radius:18px;background:#fff;box-shadow:0 4px 0 var(--ink);cursor:pointer}
+.stop:disabled{cursor:default}
+.stop.lock{background:#efe9dc;color:#5f726a}
+.stop.open{background:#fff3d6;animation:glow 1.6s ease-in-out infinite alternate}
+@keyframes glow{to{box-shadow:0 4px 0 var(--ink),0 0 0 6px rgba(255,176,32,.55)}}
+.stop.done{background:#eafbef}
+.sic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--sun2);border:2px solid var(--ink)}
+.stop.done .sic{background:var(--ok);color:#fff}
+.stop.lock .sic{background:#ddd6c6}
+.stop.fin .sic{background:var(--dome);color:#fff}
+.stx small{display:block;font-size:12.5px;font-weight:800;color:var(--mute)}
+.stx b{display:block;font:800 18px/1.1 'Baloo 2',sans-serif}
+.stx em{display:block;font-style:normal;font-size:13px;color:var(--mute)}
+.go{font:800 14px/1 'Baloo 2',sans-serif;background:var(--ink);color:#fff;padding:8px 10px;border-radius:10px}
+.stars{display:flex;gap:2px}
+.stars svg{width:18px;height:18px;fill:#d8cfbd}
+.stars svg.on{fill:var(--sun)}
+/* brief */
+.lvl{display:inline-block;font:800 13px/1 Nunito,system-ui,sans-serif;padding:6px 10px;border-radius:999px;background:var(--ink);color:#fff;margin-bottom:8px}
+.brief h2{font-size:clamp(32px,9vw,42px)}
+.brief .place{margin:4px 0 12px;color:var(--mute);font-weight:700}
+.rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.rules div{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:8px;text-align:center;font-size:12.5px;font-weight:700;color:var(--mute)}
+.rules b{display:block;font:800 22px/1.1 'Baloo 2',sans-serif;color:var(--ink)}
+/* play */
+.hud{padding:10px 12px;display:grid;gap:8px}
+.hmis{font:800 16px/1.1 'Baloo 2',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score{font:800 20px/1 'Baloo 2',sans-serif;display:flex;align-items:center;gap:4px;white-space:nowrap;position:relative}
+.score svg{width:20px;height:20px;fill:var(--sun)}
+.hearts{display:flex;gap:2px}
+.hrt svg{width:24px;height:24px;fill:var(--bad);transition:transform .3s}
+.hrt.off svg{fill:#d9cfc0;transform:scale(.8)}
+.prog{display:flex;gap:4px;flex:1;justify-content:flex-end;flex-wrap:wrap}
+.prog i{width:10px;height:10px;border-radius:50%;background:#e6dcc6;border:2px solid var(--ink)}
+.prog i.n{background:var(--sun)}
+.prog i.ok{background:var(--ok)}
+.prog i.no{background:var(--bad)}
+.track{flex:1;height:14px;border-radius:9px;background:#efe6d2;border:2px solid var(--ink);overflow:hidden}
+@keyframes beat{to{transform:scale(1.2)}}
+.bossbar{display:none;align-items:center;gap:8px;font:800 13px/1 Nunito,system-ui,sans-serif}
+#play.boss .bossbar{display:flex}
+.bossbar .track{height:12px}
+#bossFill{height:100%;background:linear-gradient(90deg,#8a93a6,#c3c9d6);transition:width .6s}
+#qcard{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.qmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--mute)}
+.tag{padding:5px 9px;border-radius:999px;border:2px solid var(--ink);color:var(--ink);background:#fff3d6;white-space:nowrap}
+.tag.bs{background:#e3f1ff}
+.tag.c{background:#ffe3d6}
+.ar{font:700 25px/2 Amiri,'Traditional Arabic',serif;text-align:center;margin:0;padding:8px 10px;background:#fff3d6;border-radius:14px;border:2px dashed #e5c27a}
+.qtext{margin:0;font-size:17.5px;font-weight:800;line-height:1.45}
+.opts{display:grid;gap:9px}
+.opt{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;text-align:left;width:100%;min-height:56px;padding:10px 12px;border:3px solid var(--ink);border-radius:16px;background:#fff;box-shadow:0 3px 0 var(--ink);font:700 15.5px/1.35 Nunito,sans-serif;cursor:pointer;transition:opacity .25s,background .2s}
+.opt b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--sun2);border:2px solid var(--ink);font:800 17px/1 'Baloo 2',sans-serif}
+.opt:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.opt.ok,.bsb.ok{background:#d8f6e2;border-color:var(--ok);box-shadow:0 3px 0 var(--ok)}
+.opt.ok b{background:var(--ok);color:#fff}
+.opt.bad,.bsb.bad{background:#ffe1e1;border-color:var(--bad);box-shadow:0 3px 0 var(--bad)}
+.opt.bad b{background:var(--bad);color:#fff}
+.opt.dim,.bsb.dim{opacity:.45}
+.opt.gone{opacity:.18;pointer-events:none;text-decoration:line-through}
+.opt:disabled,.bsb:disabled{cursor:default}
+.bsrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:auto}
+.bsb{min-height:110px;border:3px solid var(--ink);border-radius:20px;box-shadow:0 5px 0 var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font:800 24px/1 'Baloo 2',sans-serif;cursor:pointer}
+.bsb svg{width:36px;height:36px}
+.bsb.t{background:#c9f0d6}
+.bsb.f{background:#ffd3d3}
+.bsb small{font:700 12.5px/1.2 Nunito,system-ui,sans-serif;color:var(--mute)}
+.pow{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.pbtn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border:3px solid var(--ink);border-radius:14px;background:#fff;box-shadow:0 3px 0 var(--ink);font:800 14.5px/1.1 Nunito,system-ui,sans-serif;cursor:pointer;padding:6px 8px}
+.pbtn em{font-style:normal;background:var(--ink);color:#fff;border-radius:8px;padding:2px 7px;font-size:13px}
+.pbtn:disabled{opacity:.45;cursor:default}
+.shake{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.sheet{position:absolute;left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:5;max-height:62%;overflow:auto;transform:translateY(130%);transition:transform .35s cubic-bezier(.3,1.3,.5,1);background:#fff;border:3px solid var(--ink);border-radius:22px;box-shadow:0 5px 0 var(--ink);padding:14px 16px}
+.sheet.up{transform:none}
+.sheet.good{background:#eafbef}
+.sheet.nope{background:#fff0ef}
+#fbHead{display:flex;align-items:center;gap:8px;font:800 22px/1.1 'Baloo 2',sans-serif}
+#fbHead svg{width:30px;height:30px;padding:4px;border-radius:50%;color:#fff;fill:#fff}
+.good #fbHead svg{background:var(--ok)}
+.nope #fbHead svg{background:var(--bad)}
+#fbHead em{margin-left:auto;font-style:normal;font-size:18px;padding:4px 10px;border-radius:10px;background:var(--ink);color:#fff;white-space:nowrap}
+#fbBody p{margin:8px 0 0;font-size:15px}
+.fbr b{color:var(--ok)}
+#fbNext{margin-top:12px}
+.float{position:absolute;right:0;top:-6px;font:800 18px/1 'Baloo 2',sans-serif;animation:up 1s ease-out forwards;pointer-events:none}
+@keyframes up{to{transform:translateY(-34px);opacity:0}}
+.cf{position:fixed;width:10px;height:14px;border-radius:3px;z-index:9;pointer-events:none;animation:cf .9s ease-out forwards}
+@keyframes cf{to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
+/* done & result */
+.donecard{text-align:center;margin:auto 0}
+.donecard h2{font-size:clamp(34px,10vw,46px)}
+.bigstars{display:flex;justify-content:center;gap:8px;margin:12px 0}
+.bigstars svg{width:58px;height:58px;fill:#e2d8c4}
+.bigstars svg.on{fill:var(--sun);animation:spin .6s ease-out backwards}
+.bigstars svg:nth-child(2){animation-delay:.2s;transform:translateY(-10px)}
+.bigstars svg:nth-child(3){animation-delay:.4s}
+@keyframes spin{from{transform:scale(0) rotate(-120deg)}}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.stats div{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:8px 4px;font-size:12.5px;font-weight:700;color:var(--mute)}
+.stats b{display:block;font:800 24px/1.1 'Baloo 2',sans-serif;color:var(--ink);white-space:nowrap}
+.shard{display:flex;align-items:center;gap:10px;justify-content:center;font-weight:800;margin:6px 0 0}
+.shard svg{width:34px;height:34px}
+#s-result{overflow:auto}
+.rap h2{font-size:clamp(30px,8vw,38px)}
+.who2{margin:6px 0 0;color:var(--mute);font-weight:700}
+.score2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;margin:14px 0 4px}
+.nilai{font:800 clamp(64px,20vw,88px)/.9 'Baloo 2',sans-serif;color:var(--ink)}
+.pred{display:inline-block;font:800 16px/1.1 'Baloo 2',sans-serif;padding:7px 12px;border-radius:12px;background:var(--sun);border:2px solid var(--ink)}
+.pred+p{margin:6px 0 0;font-size:14px;color:var(--mute);font-weight:700}
+.bars{display:grid;gap:10px;margin-top:14px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:14px}
+.bar b{font-weight:800}
+.bar span{color:var(--mute);font-weight:700;white-space:nowrap;text-align:right}
+.bar .tr{grid-column:1/-1;height:14px;border-radius:9px;background:#efe6d2;border:2px solid var(--ink);overflow:hidden}
+.bar .tr i{display:block;height:100%;background:var(--ok)}
+.bar .tr i.mid{background:var(--sun)}
+.bar .tr i.low{background:var(--bad)}
+.kode{margin:14px 0 0;font-size:13px;color:var(--mute);font-weight:700}
+.kode b{font:800 16px 'Baloo 2',sans-serif;color:var(--ink);letter-spacing:.06em}
+.rev summary{cursor:pointer;font:800 17px/1.2 'Baloo 2',sans-serif}
+.rev ol{margin:10px 0 0;padding-left:20px;font-size:14.5px}
+.rev li{margin-bottom:12px}
+.rev .y{color:#c0392b;font-weight:700}
+.rev .r{color:var(--ok);font-weight:800}
+.rev p{margin:2px 0}
+#copyBox{width:100%;height:150px;font:13px/1.4 Nunito,system-ui,sans-serif;border:2px solid var(--ink);border-radius:12px;padding:8px}
+.note{margin:0;font-size:14px;font-weight:700;color:var(--dome);text-align:center;min-height:20px}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(18,58,44,.55);display:none;place-items:center;padding:20px}
+.modal.on{display:grid}
+.modal .card{max-width:440px;width:100%}
+.modal h3{font-size:28px;margin:0 0 10px}
+@media (max-height:640px){.bsb{min-height:84px}.logo{padding:12px}.logo h1{font-size:40px}.qtext{font-size:16.5px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg id="scene" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<defs>
+<linearGradient id="gDawn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6a983"/><stop offset=".55" stop-color="#ffd59a"/><stop offset="1" stop-color="#fff1c8"/></linearGradient>
+<linearGradient id="gDay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fb0ea"/><stop offset=".7" stop-color="#a9def8"/><stop offset="1" stop-color="#e4f6ff"/></linearGradient>
+<g id="cl"><ellipse cx="0" cy="0" rx="70" ry="24"/><ellipse cx="-34" cy="-14" rx="34" ry="24"/><ellipse cx="20" cy="-22" rx="40" ry="30"/></g>
+<path id="win" d="M0 34V12a10 10 0 0 1 20 0v22z"/>
+</defs>
+<rect width="1200" height="800" fill="url(#gDawn)"/>
+<rect id="day" width="1200" height="800" fill="url(#gDay)" opacity="0"/>
+<g id="sunG"><circle cx="735" cy="610" r="96" fill="#fff4c9" opacity=".55"/><circle cx="735" cy="610" r="56" fill="#ffd25e"/><circle cx="722" cy="598" r="40" fill="#ffe28a"/></g>
+<g fill="#fff" opacity=".9"><use href="#cl" class="cloud" x="330" y="190"/><use href="#cl" class="cloud b" x="860" y="130"/><use href="#cl" class="cloud" x="560" y="300" transform="scale(.8)"/></g>
+<path d="M0 650Q180 560 380 615T780 600T1200 625V800H0z" fill="#a6cf93"/>
+<path d="M0 640Q180 560 380 615" fill="none" stroke="#c4e2b0" stroke-width="4"/>
+<g>
+<rect x="414" y="560" width="22" height="170" fill="#f7edd6"/><rect x="426" y="560" width="10" height="170" fill="#e6d6b2"/>
+<rect x="409" y="592" width="32" height="8" rx="3" fill="#1f7a55"/><path d="M414 560Q425 530 436 560z" fill="#1f7a55"/>
+<rect x="760" y="510" width="28" height="220" fill="#f7edd6"/><rect x="775" y="510" width="13" height="220" fill="#e6d6b2"/>
+<rect x="753" y="552" width="42" height="9" rx="3" fill="#1f7a55"/><rect x="753" y="612" width="42" height="9" rx="3" fill="#1f7a55"/>
+<path d="M760 510Q774 470 788 510z" fill="#1f7a55"/><rect x="772" y="466" width="4" height="14" fill="#ffb020"/>
+<rect x="465" y="632" width="270" height="98" fill="#f7edd6"/><rect x="680" y="632" width="55" height="98" fill="#e6d6b2"/>
+<rect x="455" y="622" width="290" height="14" rx="4" fill="#1f7a55"/>
+<rect x="552" y="590" width="96" height="34" fill="#f7edd6"/><rect x="620" y="590" width="28" height="34" fill="#e6d6b2"/>
+<path d="M546 593C546 540 600 525 600 498C600 525 654 540 654 593z" fill="#1f7a55"/>
+<path d="M560 590C560 548 590 532 598 510C584 540 572 556 572 590z" fill="#38a575"/>
+<rect x="598" y="470" width="4" height="30" fill="#ffb020"/><circle cx="600" cy="466" r="8" fill="#ffb020"/><circle cx="604" cy="463" r="7" fill="#f6a983"/>
+<g fill="#2a5b48"><use href="#win" x="485" y="660"/><use href="#win" x="520" y="660"/><use href="#win" x="660" y="660"/><use href="#win" x="695" y="660"/></g>
+<path d="M578 730v-38a22 22 0 0 1 44 0v38z" fill="#123a2c"/>
+</g>
+<g><rect x="356" y="660" width="10" height="70" fill="#6b4a2b"/><circle cx="360" cy="650" r="34" fill="#3f8c55"/><circle cx="345" cy="636" r="18" fill="#5aa56a"/>
+<rect x="836" y="670" width="10" height="60" fill="#6b4a2b"/><circle cx="840" cy="660" r="30" fill="#3f8c55"/><circle cx="828" cy="648" r="15" fill="#5aa56a"/>
+<rect x="230" y="680" width="8" height="50" fill="#6b4a2b"/><circle cx="234" cy="672" r="26" fill="#468f58"/>
+<rect x="960" y="676" width="8" height="54" fill="#6b4a2b"/><circle cx="964" cy="668" r="28" fill="#468f58"/></g>
+<path d="M0 724Q300 704 600 726T1200 718V800H0z" fill="#4e9b5f"/>
+<path d="M560 800Q585 760 600 728Q615 760 640 800z" fill="#e9d9ae"/>
+</svg>
+<div id="fog"></div>
+
+<div id="app">
+
+<section class="screen" id="s-title">
+ <div class="card logo">
+  <h1>Dhuha <span>Quest</span></h1>
+  <p>Misi Saling Mengingatkan</p>
+  <div class="chips" id="chips"></div>
+  <p class="materi" id="materi"></p>
+ </div>
+ <div class="sp"></div>
+ <div class="foot">
+  <details class="card how"><summary>Cara main</summary>
+   <ul>
+    <li>Selesaikan 5 misi berurutan: Pemanasan, Pengetahuan, Analisis, Tantangan, lalu Misi Terakhir.</li>
+    <li>Tantangannya berupa pilihan ganda dan benar/salah. Tidak ada batas waktu, jadi baca setiap soal dengan teliti.</li>
+    <li>Tiap misi kamu punya 3 nyawa. Jawaban salah: nyawa berkurang dan skor −25.</li>
+    <li>Nyawa habis? Sahabatmu datang mengingatkan: nyawa +1, tapi skor −50.</li>
+    <li>Bantuan Bisikan Sahabat (hapus 2 pilihan salah) bisa dipakai 2 kali untuk seluruh game. Poin tantangan yang memakai bantuan dibagi dua.</li>
+    <li>Jawab benar beruntun untuk bonus poin. Nilai pemahaman di rapor dihitung dari jumlah jawaban benar, bukan dari skor game.</li>
+    <li>Urutan tantangan dan pilihan jawaban diacak untuk tiap pemain.</li>
+   </ul>
+  </details>
+  <div class="row"><button class="btn" id="bStart">Mulai petualangan</button><button class="mute" aria-label="Suara"></button></div>
+ </div>
+</section>
+
+<section class="screen" id="s-form">
+ <div class="sp"></div>
+ <form class="card" id="fForm" novalidate>
+  <h2 style="font-size:32px;margin-bottom:4px">Data peneliti muda</h2>
+  <p style="margin:0 0 14px;color:var(--mute);font-weight:700">Isi dulu supaya rapormu tercatat dengan benar.</p>
+  <div class="field"><label for="iNama">Nama lengkap</label><input id="iNama" autocomplete="name" maxlength="40" placeholder="Contoh: Aisyah Putri"></div>
+  <div class="two">
+   <div class="field"><label for="iKelas">Kelas</label><input id="iKelas" maxlength="12" placeholder="XI-3"></div>
+   <div class="field"><label for="iAbsen">No. absen</label><input id="iAbsen" inputmode="numeric" maxlength="3" placeholder="12"></div>
+  </div>
+  <p class="err" id="fErr"></p>
+  <button class="btn" type="submit">Lanjut</button>
+ </form>
+ <div class="sp"></div>
+</section>
+
+<section class="screen" id="s-story">
+ <div class="sp"></div>
+ <div class="card">
+  <div class="dlg"><div class="av" id="stAv"></div><div><div class="who" id="stWho"></div><p class="say" id="stSay"></p></div></div>
+  <button class="btn" id="stNext" style="margin-top:12px">Lanjut</button>
+ </div>
+</section>
+
+<section class="screen" id="s-map">
+ <div class="card maphead">
+  <div><div class="clock" id="clock">07.00</div><small>waktu Dhuha</small></div>
+  <div class="sp"><small id="mapHello">Kumpulkan 5 Kepingan Cahaya Dhuha</small><div class="sunbar"><i id="sunbar" style="width:0"></i></div></div>
+  <button class="mute" aria-label="Suara"></button>
+ </div>
+ <div class="maplist" id="mapList"></div>
+ <button class="btn" id="toRapor" hidden>Lihat rapor petualangan</button>
+</section>
+
+<section class="screen" id="s-brief">
+ <div class="sp"></div>
+ <div class="card brief">
+  <span class="lvl" id="bLvl"></span>
+  <h2 id="bName"></h2>
+  <p class="place" id="bPlace"></p>
+  <div class="dlg"><div class="av" id="bAv"></div><div><div class="who" id="bWho"></div><p class="say" id="bSay"></p></div></div>
+  <div class="rules" id="bRules"></div>
+ </div>
+ <div class="row"><button class="btn alt" id="bBack" style="width:auto;flex:none;padding:12px 16px">Peta</button><button class="btn" id="bGo">Mulai misi</button></div>
+</section>
+
+<section class="screen" id="s-play">
+ <div id="play" style="display:contents">
+ <div class="card hud">
+  <div class="row"><div class="hmis sp" id="hMis"></div><div class="score" id="hScoreBox"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.4 7L12 17.7 5.8 21.2l1.4-7L2 9.4l7-.8z"/></svg><span id="hScore">0</span></div><button class="mute" aria-label="Suara" style="width:38px;height:38px"></button></div>
+  <div class="row"><div class="hearts" id="hearts"></div><div class="prog" id="prog"></div></div>
+  <div class="bossbar"><span>Kabut Lalai</span><div class="track"><div id="bossFill"></div></div></div>
+ </div>
+ <div class="card" id="qcard"></div>
+ <div class="pow">
+  <button class="pbtn" id="hint"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2zM9 20h6v2H9z"/></svg>Bisikan Sahabat <em id="hintN">2</em></button>
+ </div>
+ </div>
+</section>
+
+<section class="screen" id="s-done">
+ <div class="card donecard">
+  <h2 id="dTitle">Misi selesai!</h2>
+  <p id="dSub" style="margin:6px 0 0;font-weight:700;color:var(--mute)"></p>
+  <div class="bigstars" id="dStars"></div>
+  <div class="stats" id="dStats"></div>
+  <p class="shard" id="dShard"></p>
+  <button class="btn" id="dNext" style="margin-top:14px">Kembali ke peta</button>
+ </div>
+</section>
+
+<section class="screen" id="s-result">
+ <div class="card rap">
+  <h2>Rapor petualangan</h2>
+  <p class="who2" id="rWho"></p>
+  <div class="score2"><div class="nilai" id="rNilai">0</div><div><span class="pred" id="rPred"></span><p id="rDesc"></p></div></div>
+  <div class="stats" id="rStats"></div>
+  <div class="bars" id="rBars"></div>
+  <p class="kode">Kode verifikasi: <b id="rKode"></b></p>
+ </div>
+ <details class="card rev" id="rRev"><summary id="rRevT">Pembahasan jawaban yang keliru</summary><ol id="rList"></ol></details>
+ <div class="foot">
+  <button class="btn" id="rCopy">Salin hasil untuk guru</button>
+  <p class="note" id="rNote"></p>
+  <textarea id="copyBox" hidden readonly aria-label="Teks hasil"></textarea>
+  <button class="btn alt" id="rAgain">Main lagi dari awal</button>
+ </div>
+</section>
+
+<div class="sheet" id="fb" role="status" aria-live="polite"><div id="fbHead"></div><div id="fbBody"></div><button class="btn" id="fbNext">Lanjut</button></div>
+</div>
+
+<div class="modal" id="rescue"><div class="card">
+ <div class="dlg"><div class="av" id="rsAv"></div><div><div class="who"><b>Kak Fajar</b>datang mengingatkan</div><p class="say" id="rsSay" style="min-height:0"></p></div></div>
+ <p style="margin:12px 0;font-weight:800">Nyawa +1, skor −50. Ayo bangkit lagi!</p>
+ <button class="btn" id="rsGo">Terima kasih, Kak!</button>
+</div></div>
+
+<script>
+{
+const IDENT={mapel:"PAI dan Budi Pekerti",kelas:"XI",materi:"Budaya Saling Mengingatkan dalam Shalat Dhuha dan Pembentukan Karakter Religius",sasaran:"SMA/SMK"};
+const NPC={fajar:{n:"Kak Fajar",r:"Ketua Rohis"},salma:{n:"Bu Salma",r:"Guru PAI"},nadia:{n:"Kak Nadia",r:"Peneliti senior"}};
+const AL_ASHR="إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ";
+const ADZ="وَذَكِّرْ فَإِنَّ الذِّكْرَىٰ تَنفَعُ الْمُؤْمِنِينَ";
+const M=[
+{id:"m1",no:"Misi 1",name:"Gerbang Pagi",lvl:"Misi Pemanasan",skill:"Pemahaman dasar",jam:"07.00",place:"Gerbang Madrasah Aliyah X",npc:"fajar",
+story:"Sebelum masuk gerbang, kita pemanasan dulu. Soalnya seputar alasan kenapa pembiasaan ibadah dan budaya saling mengingatkan itu penting.",
+qs:[
+{t:"bs",q:"Penguatan Pendidikan Karakter (PPK) ditetapkan pemerintah lewat Peraturan Presiden Nomor 87 Tahun 2017.",a:true,e:"PPK ditetapkan lewat Perpres No. 87 Tahun 2017 sebagai gerakan pendidikan yang menjadi tanggung jawab satuan pendidikan untuk memperkuat karakter peserta didik."},
+{t:"pg",q:"Dalam PPK, nilai apa yang ditekankan sebagai salah satu nilai utama dan sekaligus menjadi ciri khas madrasah?",o:["Nilai religius","Nilai nasionalis","Nilai integritas","Nilai gotong royong"],e:"Nilai religius menjadi salah satu nilai utama PPK. Bagi madrasah, nilai ini bukan sekadar aturan, tetapi juga bagian dari ciri khasnya."},
+{t:"bs",q:"Menurut latar belakang penelitian, pembelajaran agama sudah cukup kalau siswa paham pengetahuan keagamaannya saja.",a:false,e:"Paham saja belum cukup. Siswa juga perlu dibiasakan menerapkan nilai-nilai agama dalam kehidupan sehari-hari."},
+{t:"pg",ar:AL_ASHR,q:"Ayat yang memuat pesan “saling menasihati untuk kebenaran dan saling menasihati untuk kesabaran” ini adalah …",o:["QS. Al-‘Ashr ayat 3","QS. Al-‘Ashr ayat 2","QS. Adz-Dzariyat ayat 55","QS. Adz-Dzariyat ayat 56"],e:"QS. Al-‘Ashr ayat 3 menyebut orang yang tidak merugi: beriman, beramal saleh, serta saling menasihati dalam kebenaran dan kesabaran."},
+{t:"pg",ar:ADZ,q:"“Dan tetaplah memberi peringatan, karena sesungguhnya peringatan itu bermanfaat bagi orang-orang mukmin.” Sikap yang paling sesuai dengan pesan ayat ini adalah …",o:["Terus mengingatkan teman dalam kebaikan karena itu bermanfaat baginya","Mengingatkan teman cukup sekali, sisanya biar ia putuskan sendiri","Menyerahkan tugas mengingatkan hanya kepada guru yang mengawasi","Mengingatkan teman hanya jika disertai sanksi supaya ia jera"],e:"Kata “tetaplah” (QS. Adz-Dzariyat ayat 55) berarti peringatan diberikan terus-menerus, karena pengingat itu bermanfaat bagi orang beriman."},
+{t:"bs",q:"Globalisasi disebut bisa memengaruhi karakter anak, misalnya jadi sulit melaksanakan ibadah dan mudah terpengaruh budaya luar.",a:true,e:"Proposal menyebut globalisasi dapat membuat anak sulit beribadah, kurang menghormati orang lain, dan mudah terpengaruh budaya dari luar."},
+{t:"pg",q:"Di MA Nurul Islam Pasirwangi Garut, siswa yang tidak ikut shalat Dhuha berjamaah mendapat sanksi berupa …",o:["Menghafal surah-surah pendek","Membersihkan area masjid madrasah","Menulis surat pernyataan tertulis","Mengulang shalat di ruang guru piket"],e:"Di madrasah itu shalat Dhuha diwajibkan, dan yang tidak ikut berjamaah diberi sanksi menghafal surah-surah pendek (Raito & Latifah, 2022)."}
+]},
+{id:"m2",no:"Misi 2",name:"Ruang Arsip",lvl:"Misi Pengetahuan",skill:"Pemahaman konsep",jam:"07.30",place:"Ruang arsip madrasah",npc:"salma",
+story:"Di ruang arsip ini tersimpan rencana penelitian tentang budaya saling mengingatkan. Pahami konsepnya: alasan penelitian, metode, sampai siapa saja informannya.",
+qs:[
+{t:"pg",q:"Kenapa budaya saling mengingatkan shalat Dhuha dianggap menarik untuk diteliti?",o:["Kebiasaan itu muncul dari interaksi antarsiswa, bukan hanya dari aturan","Kebiasaan itu muncul dari sanksi tegas sehingga siswa terpaksa patuh","Kebiasaan itu hanya ada di madrasah yang mewajibkan Dhuha tiap hari","Kebiasaan itu sudah sering diteliti sehingga hasilnya mudah dibanding"],e:"Yang menarik, kebiasaan itu tumbuh dari interaksi antarpeserta didik dan tidak hanya bergantung pada pengawasan guru atau aturan madrasah."},
+{t:"pg",q:"Apa yang membedakan penelitian ini dari penelitian Raito & Latifah (2022) serta Hidayat & Purwowidodo (2024)?",o:["Menyoroti kebiasaan siswa saling mengingatkan Dhuha sebagai pembentuk karakter","Mengukur besar pengaruh shalat Dhuha terhadap karakter dengan angka statistik","Mengkaji peran pembiasaan Dhuha di madrasah ibtidaiyah lewat kajian pustaka","Membandingkan aturan dan sanksi shalat Dhuha di beberapa madrasah aliyah"],e:"Dua penelitian sebelumnya membahas pengaruh atau peran pembiasaan Dhuha. Penelitian ini mengisi celah: kebiasaan siswa saling mengingatkan untuk shalat Dhuha."},
+{t:"pg",c:1,q:"Penelitian ini memakai pendekatan kualitatif dengan metode deskriptif. Alasan yang paling tepat adalah …",o:["Budaya itu terjadi alami, jadi perlu dipahami langsung dari lapangan","Budaya itu perlu diukur pengaruhnya antarvariabel dengan uji statistik","Budaya itu bisa direkayasa dan diuji coba seperti dalam eksperimen","Budaya itu cukup dipahami dari angket tertutup yang diisi para siswa"],e:"Budaya saling mengingatkan terjadi alami dan tidak bisa direkayasa seperti eksperimen, jadi dipahami langsung dari kondisi lapangan, bukan diukur antarvariabel."},
+{t:"bs",q:"Data sekunder penelitian ini diperoleh dari hasil wawancara dengan kepala madrasah.",a:false,e:"Wawancara dan observasi menghasilkan data primer. Data sekunder berasal dari dokumen madrasah yang berkaitan dengan pelaksanaan shalat Dhuha."},
+{t:"pg",q:"Informan dipilih secara sengaja berdasarkan kriteria yang relevan dengan tujuan penelitian. Teknik ini disebut …",o:["Purposive sampling","Snowball sampling","Random sampling","Quota sampling"],e:"Purposive sampling dipilih karena penelitian ini tidak bertujuan menggeneralisasi, melainkan memahami fenomena secara mendalam."},
+{t:"pg",q:"Kelompok mana yang seluruhnya termasuk informan PENDUKUNG?",o:["Guru PAI, guru piket, dan kepala madrasah","Pengurus Rohis, ketua kelas, dan guru PAI","Ketua kelas, guru piket, dan kepala madrasah","Pengurus Rohis, guru piket, dan guru PAI"],e:"Informan utama: pengurus Rohis, ketua kelas, dan siswa yang rutin Dhuha. Informan pendukung: guru PAI (pembina), guru piket (pengawas), dan kepala madrasah (penentu kebijakan)."},
+{t:"bs",q:"Salah satu kriteria informan utama adalah rutin mengikuti shalat Dhuha paling sedikit satu semester.",a:true,e:"Kriteria lainnya: siswa aktif kelas X–XII, terlibat dalam praktik saling mengingatkan, serta bersedia dan mampu bercerita secara terbuka."}
+]},
+{id:"m3",no:"Misi 3",name:"Markas Investigasi",lvl:"Misi Analisis",skill:"Menganalisis permasalahan",jam:"08.00",place:"Ruang Rohis, markas para peneliti",npc:"nadia",
+story:"Data mulai masuk, tapi ada yang janggal. Analisis tiap kasus dan pilih langkah penelitian yang paling tepat. Teliti, ya!",
+qs:[
+{t:"pg",c:1,q:"Peneliti ingin informan bebas bercerita, tapi tetap memegang daftar pertanyaan pokok tentang budaya saling mengingatkan. Jenis wawancara yang cocok adalah …",o:["Wawancara semi-terstruktur","Wawancara terstruktur","Wawancara tidak terstruktur","Wawancara tertutup"],e:"Wawancara semi-terstruktur termasuk wawancara mendalam: lebih bebas daripada wawancara terstruktur, tetapi tetap ada pedoman pertanyaan."},
+{t:"pg",c:1,q:"Saat jam istirahat, peneliti berdiri di sudut masjid madrasah dan mencatat siapa mengajak siapa, tanpa ikut mengajak atau terlibat kegiatan. Teknik yang ia lakukan adalah …",o:["Observasi non-partisipan","Observasi partisipan","Wawancara mendalam","Dokumentasi kegiatan"],e:"Dalam observasi non-partisipan, peneliti tidak terlibat langsung dan berperan sebagai pengamat independen."},
+{t:"pg",q:"Mana yang termasuk data dokumentasi dalam penelitian ini?",o:["Foto kegiatan, jadwal, dan tata tertib Dhuha","Transkrip wawancara dengan pengurus Rohis","Catatan lapangan soal respons siswa","Jawaban lisan guru piket kepada peneliti"],e:"Dokumentasi berupa foto kegiatan, jadwal, tata tertib atau ketentuan sekolah tentang shalat Dhuha, dan dokumen lain yang relevan."},
+{t:"pg",c:1,q:"Peneliti memberi label “ajakan ibadah bersama” pada kutipan siswa: “Aku biasanya narik temen sebangku biar ke masjid bareng.” Kegiatan ini termasuk tahap …",o:["Reduksi data, yaitu pemberian kode","Penyajian data, yaitu menyusun matriks","Penarikan kesimpulan dan verifikasi","Triangulasi teknik untuk mengecek data"],e:"Pemberian kode (label kata atau frasa) pada potongan transkrip adalah bagian dari reduksi data. Kode yang mirip lalu dikelompokkan jadi kategori dan tema."},
+{t:"pg",c:1,q:"Guru PAI bilang semua siswa aktif saling mengingatkan, sedangkan siswa bilang hanya sebagian. Langkah peneliti yang paling tepat adalah …",o:["Mengonfirmasi ulang ke informan dan mencatat perbedaan itu sebagai temuan","Memakai keterangan guru PAI karena guru lebih memahami kondisi siswanya","Menghapus data yang berbeda agar kesimpulan penelitian tampak konsisten","Memakai keterangan siswa karena merekalah pelaku langsung budaya itu"],e:"Dalam triangulasi sumber, perbedaan dikonfirmasi ulang ke informan, dicatat sebagai temuan, lalu ditampilkan di matriks perbandingan."},
+{t:"pg",c:1,q:"Siswa mengaku rutin saling mengingatkan. Peneliti lalu mengamati langsung waktu Dhuha dan memeriksa daftar hadir. Cara mengecek data ini disebut …",o:["Triangulasi teknik","Triangulasi sumber","Member checking","Reduksi data"],e:"Triangulasi teknik membandingkan data dari cara yang berbeda: hasil wawancara dicek dengan observasi dan dokumentasi."},
+{t:"bs",q:"Dalam model Miles dan Huberman, analisis data baru dimulai setelah seluruh data selesai dikumpulkan.",a:false,e:"Analisis berlangsung terus-menerus: sejak sebelum terjun ke lokasi, selama pengumpulan data, sampai setelah peneliti meninggalkan lokasi."}
+]},
+{id:"m4",no:"Misi 4",name:"Koridor Kelas",lvl:"Misi Tantangan",skill:"Penerapan sehari-hari",jam:"08.30",place:"Koridor kelas saat jam istirahat",npc:"fajar",
+story:"Bel istirahat berbunyi! Sekarang saatnya praktik. Pilih tindakan terbaik di setiap situasi sehari-hari.",
+qs:[
+{t:"pg",c:1,q:"Bel istirahat berbunyi. Rina melihat Dodi asyik main game di kelas, padahal waktu Dhuha hampir habis. Sikap Rina yang paling mencerminkan budaya saling mengingatkan adalah …",o:["Mengajak Dodi dengan ramah lalu berangkat ke masjid bersama-sama","Mencatat nama Dodi lalu menyerahkannya ke guru piket saat itu juga","Mengingatkan Dodi lewat grup kelas supaya semua teman ikut tahu","Menunggu Dodi selesai main dulu supaya ia tidak merasa tersinggung"],e:"Ajakan langsung yang ramah dan beribadah bersama, misalnya mengajak teman ke tempat shalat saat istirahat, adalah bentuk saling mengingatkan yang paling dekat."},
+{t:"bs",q:"Siswa bisa terdorong beribadah bukan hanya karena aturan, tetapi juga karena ajakan dan pengingat dari teman.",a:true,e:"Inilah inti budaya saling mengingatkan: ibadah tidak hanya karena aturan, tetapi juga karena ajakan teman."},
+{t:"pg",c:1,q:"Sebagai ketua kelas, Arif ingin mendukung budaya saling mengingatkan. Peran yang paling sesuai dengan posisinya adalah …",o:["Menggerakkan dan mengingatkan teman sekelas saat waktu Dhuha tiba","Menetapkan kebijakan pembiasaan shalat Dhuha bagi seluruh madrasah","Mengawasi pelaksanaan shalat Dhuha di lapangan sebagai petugas piket","Membina kegiatan dan menilai perkembangan karakter religius siswa"],e:"Posisi pengurus Rohis dan ketua kelas memungkinkan mereka menggerakkan dan mengingatkan teman sebaya. Kebijakan, pengawasan, dan pembinaan adalah peran kepala madrasah, guru piket, dan guru PAI."},
+{t:"pg",q:"Pasangan peran yang TEPAT dalam mendukung budaya saling mengingatkan adalah …",o:["Guru piket mengawasi pelaksanaan, kepala madrasah menentukan kebijakan","Guru piket menentukan kebijakan, kepala madrasah mengawasi pelaksanaan","Guru PAI menentukan kebijakan, guru piket membina kegiatan Rohis","Kepala madrasah membina kegiatan, guru PAI mengawasi daftar hadir"],e:"Guru PAI membina kegiatan, guru piket mengawasi pelaksanaan shalat Dhuha, dan kepala madrasah menentukan kebijakan pembiasaan."},
+{t:"pg",c:1,q:"Awalnya Salsa shalat Dhuha karena sering diajak temannya. Setelah satu semester, ia tetap shalat Dhuha walau tidak ada yang mengajak. Hal ini paling tepat dimaknai sebagai …",o:["Pengingat teman membantu menumbuhkan konsistensi dan kesadaran beribadah","Pengingat teman tidak berpengaruh karena Salsa memang rajin sejak awal","Pengingat teman membuat Salsa bergantung sehingga ibadahnya kurang ikhlas","Pengingat teman hanya berhasil jika disertai sanksi tegas dari madrasah"],e:"Kasus ini menggambarkan kaitan budaya saling mengingatkan dengan konsistensi ibadah: dari diajak, lama-lama tumbuh kesadaran sendiri."},
+{t:"bs",q:"Mengingatkan teman untuk shalat Dhuha hanya tugas guru PAI dan guru piket, bukan tugas sesama siswa.",a:false,e:"Justru yang diteliti adalah kebiasaan sesama siswa saling mengingatkan. Guru mendukung, tetapi pengingat dari teman sebaya itulah intinya."},
+{t:"pg",c:1,q:"Doni sudah mengajak temannya tiga hari berturut-turut, tetapi temannya belum mau ikut. Berdasarkan QS. Al-‘Ashr ayat 3, sikap terbaik Doni adalah …",o:["Terus mengajak dengan sabar karena saling menasihati disertai kesabaran","Berhenti mengajak karena kewajibannya menasihati sudah ia tunaikan","Mengajak dengan nada yang lebih keras agar temannya segera sadar","Meminta guru memberi sanksi karena ajakannya selalu diabaikan"],e:"QS. Al-‘Ashr ayat 3 memasangkan saling menasihati dalam kebenaran dengan saling menasihati dalam kesabaran. Mengingatkan butuh kesabaran."}
+]},
+{id:"m5",no:"Misi Terakhir",name:"Masjid Madrasah",lvl:"Final Mission",skill:"Evaluasi keseluruhan",jam:"09.00",place:"Halaman masjid, tempat Kabut Lalai berkumpul",npc:"salma",boss:1,
+story:"Kabut Lalai berkumpul di depan masjid. Setiap jawaban benar memancarkan cahaya yang mengusirnya. Keluarkan semua yang sudah kamu pelajari!",
+qs:[
+{t:"bs",q:"Penelitian Raito dan Latifah (2022) menemukan shalat Dhuha berpengaruh sebesar 61,41% terhadap karakter religius siswa.",a:false,e:"Pengaruhnya 38,59%. Sisanya, 61,41%, dipengaruhi faktor lain yang tidak diteliti."},
+{t:"pg",q:"Jumlah informan tidak dipatok sejak awal. Pengumpulan data terus berjalan sampai tidak ada informasi baru yang muncul. Prinsip ini disebut …",o:["Saturasi data","Reduksi data","Triangulasi data","Verifikasi data"],e:"Prinsip saturasi data: pengumpulan data berlanjut sampai tidak ada informasi baru. Karena itu jumlah informan utama (6 orang) bisa bertambah."},
+{t:"bs",q:"Member checking dilakukan dengan memberikan transkrip atau ringkasan wawancara kepada informan untuk dikoreksi dan disepakati.",a:true,e:"Member checking memastikan data sesuai maksud informan sehingga tidak terjadi salah tafsir."},
+{t:"pg",q:"Urutan tiga aktivitas analisis data model Miles dan Huberman yang benar adalah …",o:["Reduksi data → penyajian data → kesimpulan dan verifikasi","Penyajian data → reduksi data → kesimpulan dan verifikasi","Reduksi data → kesimpulan dan verifikasi → penyajian data","Pengumpulan data → reduksi data → triangulasi sumber"],e:"Model interaktif Miles dan Huberman: reduksi data, penyajian data, lalu penarikan kesimpulan dan verifikasi, yang saling berkaitan."},
+{t:"pg",c:1,q:"Peneliti menyusun tabel kode–kategori–tema dan matriks yang membandingkan pernyataan siswa, guru PAI, dan hasil observasi. Ia sedang berada di tahap …",o:["Penyajian data","Reduksi data","Penarikan kesimpulan","Pengumpulan data"],e:"Penyajian data berupa uraian naratif, tabel kategorisasi, dan matriks perbandingan agar pola hubungan antarkategori terlihat."},
+{t:"bs",q:"Kesimpulan awal dalam penelitian ini masih sementara dan bisa berubah kalau tidak didukung bukti yang kuat.",a:true,e:"Kesimpulan awal bersifat sementara. Kesimpulan dinilai kredibel bila didukung bukti yang valid dan konsisten saat peneliti kembali ke lapangan."},
+{t:"pg",q:"Pertanyaan mana yang BUKAN termasuk rumusan masalah penelitian ini?",o:["Berapa persen pengaruh shalat Dhuha terhadap prestasi belajar siswa?","Bagaimana bentuk budaya saling mengingatkan dalam shalat Dhuha?","Apa faktor pendukung dan penghambat budaya saling mengingatkan?","Bagaimana peran Rohis, ketua kelas, dan guru dalam mendukungnya?"],e:"Rumusan masalahnya: bentuk budaya, proses pembentukan karakter beserta peran pihak terkait, faktor pendukung dan penghambat, serta kaitannya dengan konsistensi. Tidak ada yang mengukur persentase."},
+{t:"pg",c:1,q:"Kamu ingin meneliti budaya saling mengingatkan di sekolahmu seperti proposal ini. Rancangan yang PALING sesuai adalah …",o:["Kualitatif deskriptif, purposive sampling, wawancara-observasi-dokumentasi, triangulasi","Kuantitatif korelasional, random sampling, angket tertutup, uji regresi statistik","Kualitatif deskriptif, random sampling, angket tertutup, uji validitas butir soal","Eksperimen kelas, purposive sampling, tes awal dan akhir, triangulasi sumber"],e:"Proposal ini memakai kualitatif deskriptif, informan dipilih dengan purposive sampling, data dari wawancara, observasi, dan dokumentasi, lalu diuji dengan triangulasi."},
+{t:"pg",c:1,q:"Kamu pengurus Rohis. Banyak teman menjawab “nanti aja” setiap diajak Dhuha. Strategi yang paling sejalan dengan budaya saling mengingatkan adalah …",o:["Mengajak bersama saat istirahat sambil memberi contoh secara konsisten","Mengusulkan sanksi hafalan surah pendek bagi semua yang tidak ikut","Menempel daftar nama teman yang jarang ikut di mading madrasah","Menyerahkan urusan itu sepenuhnya kepada guru piket hari itu"],e:"Budaya saling mengingatkan tumbuh dari ajakan dan teladan antarteman, bukan hanya dari sanksi atau pengawasan."}
+]}
+];
+const PROLOG=["Assalamu’alaikum, {n}! Aku Fajar, ketua Rohis Madrasah Aliyah X.","Pagi ini ada yang aneh. Kabut Lalai menyelimuti madrasah, dan teman-teman makin jarang saling mengajak shalat Dhuha.","Kamu ditugaskan sebagai peneliti muda. Selesaikan 5 misi, kumpulkan 5 Kepingan Cahaya Dhuha, dan usir kabut itu sebelum waktu Dhuha habis.","Ingat pesan QS. Al-‘Ashr ayat 3: saling menasihati dalam kebenaran dan kesabaran. Siap? Bismillah!"];
+const OKS=["Mantap!","Tepat sekali!","Keren, lanjut!","Cahaya makin terang!","MasyaAllah, benar!"];
+const NOS=["Belum tepat.","Hampir!","Ups, kurang pas."];
+const RESC=["Hei, jangan menyerah! Kita kan saling mengingatkan.","Pelan-pelan, baca lagi soalnya dengan teliti. Kamu pasti bisa!","Tarik napas dulu. Ingat, sabar itu bagian dari saling menasihati."];
+const IC={
+heart:'<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8.4 3.2 4.5 7 4.5c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.8 0 6 3.9 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg>',
+star:'<svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.4 7L12 17.7 5.8 21.2l1.4-7L2 9.4l7-.8z"/></svg>',
+check:'<svg class="ic" viewBox="0 0 24 24"><path d="M9.5 16.2 5.3 12l-1.8 1.8 6 6L21 8.3l-1.8-1.8z"/></svg>',
+x:'<svg class="ic" viewBox="0 0 24 24"><path d="M18.4 4.2 12 10.6 5.6 4.2 4.2 5.6 10.6 12l-6.4 6.4 1.4 1.4 6.4-6.4 6.4 6.4 1.4-1.4-6.4-6.4 6.4-6.4z"/></svg>',
+lock:'<svg class="ic" viewBox="0 0 24 24"><path d="M17 9V7A5 5 0 0 0 7 7v2H5v13h14V9zm-8-2a3 3 0 0 1 6 0v2H9z"/></svg>',
+on:'<svg class="ic" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>',
+off:'<svg class="ic" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm18.7 1.7-1.4-1.4-2.3 2.3-2.3-2.3-1.4 1.4 2.3 2.3-2.3 2.3 1.4 1.4 2.3-2.3 2.3 2.3 1.4-1.4-2.3-2.3z"/></svg>',
+shard:'<svg viewBox="0 0 40 40"><path d="M20 2 31 16 20 38 9 16z" fill="#ffd25e" stroke="#123a2c" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 2 14 16h12z" fill="#fff3c4"/></svg>'
+};
+const PL=[
+'<svg class="ic" viewBox="0 0 24 24"><path d="M3 21V10a9 9 0 0 1 18 0v11h-4v-9a5 5 0 0 0-10 0v9z"/></svg>',
+'<svg class="ic" viewBox="0 0 24 24"><path d="M3 4h6.5A2.5 2.5 0 0 1 12 6a2.5 2.5 0 0 1 2.5-2H21v15h-6.5a2.5 2.5 0 0 0-2.5 2 2.5 2.5 0 0 0-2.5-2H3z"/></svg>',
+'<svg class="ic" viewBox="0 0 24 24"><path d="M10 3a7 7 0 1 0 4.2 12.6l5.6 5.6 1.4-1.4-5.6-5.6A7 7 0 0 0 10 3zm0 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z"/></svg>',
+'<svg class="ic" viewBox="0 0 24 24"><circle cx="8" cy="7" r="3.2"/><circle cx="16.5" cy="7.5" r="2.8"/><path d="M2 20c0-4 2.7-6.5 6-6.5s6 2.5 6 6.5zm12.3 0c0-2.6-.8-4.6-2.1-5.9a5 5 0 0 1 9.8 2V20z"/></svg>',
+'<svg class="ic" viewBox="0 0 24 24"><path d="M11.4 1h1.2v3h-1.2zM12 5c3.9 0 7 3 7 7H5c0-4 3.1-7 7-7zM3 13h18v2H3zm2 3h14v6h-4v-3a3 3 0 0 0-6 0v3H5z"/></svg>'
+];
+const AV={
+fajar:'<svg viewBox="0 0 64 64"><rect width="64" height="64" fill="#ffd25e"/><path d="M8 64q24-26 48 0" fill="#fff"/><path d="M26 50h12v6H26z" fill="#e8b48a"/><circle cx="32" cy="34" r="15" fill="#e8b48a"/><path d="M17 27q15-14 30 0v-6a15 6 0 0 0-30 0z" fill="#123a2c"/><circle cx="27" cy="35" r="2" fill="#123a2c"/><circle cx="37" cy="35" r="2" fill="#123a2c"/><path d="M27 41q5 4 10 0" stroke="#123a2c" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>',
+salma:'<svg viewBox="0 0 64 64"><rect width="64" height="64" fill="#b9e6c8"/><path d="M8 64V40a24 24 0 0 1 48 0v24z" fill="#1f7a55"/><ellipse cx="32" cy="36" rx="12" ry="13" fill="#e8b48a"/><path d="M19 32a13 13 0 0 1 26 0" fill="none" stroke="#38a575" stroke-width="3"/><circle cx="27.5" cy="36" r="1.9" fill="#123a2c"/><circle cx="36.5" cy="36" r="1.9" fill="#123a2c"/><path d="M28 42q4 3 8 0" stroke="#123a2c" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>',
+nadia:'<svg viewBox="0 0 64 64"><rect width="64" height="64" fill="#ffe0c2"/><path d="M8 64V40a24 24 0 0 1 48 0v24z" fill="#e8743f"/><ellipse cx="32" cy="36" rx="12" ry="13" fill="#d9a07a"/><circle cx="27.5" cy="36" r="1.9" fill="#123a2c"/><circle cx="36.5" cy="36" r="1.9" fill="#123a2c"/><path d="M23 33h18" stroke="#123a2c" stroke-width="1.6"/><circle cx="27.5" cy="36" r="4" fill="none" stroke="#123a2c" stroke-width="1.6"/><circle cx="36.5" cy="36" r="4" fill="none" stroke="#123a2c" stroke-width="1.6"/><path d="M28 43q4 3 8 0" stroke="#123a2c" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>'
+};
+const TOTALQ=M.reduce((s,m)=>s+m.qs.length,0);
+const $=s=>document.querySelector(s);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let S={p:null,res:{},score:0,power:{hint:2},mute:false};
+let P=null,AC=null,TY=null,story=0;
+
+function snd(k){if(S.mute)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const seq={ok:[[660,.08],[990,.16]],bad:[[196,.25,"sawtooth"]],tick:[[1250,.04]],tap:[[540,.05]],win:[[523,.1],[659,.1],[784,.1],[1047,.3]]}[k];let t=AC.currentTime;for(const [f,d,w] of seq){const o=AC.createOscillator(),g=AC.createGain();o.type=w||"triangle";o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.16,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.03);t+=d*.9}}catch(e){}}
+function updMute(){document.querySelectorAll(".mute").forEach(b=>{b.innerHTML=S.mute?IC.off:IC.on;b.setAttribute("aria-label",S.mute?"Nyalakan suara":"Matikan suara")})}
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.id===id));if(id!=="s-play")$("#fog").style.opacity=0}
+function type(el,txt){clearInterval(TY);if(reduce){el.textContent=txt;return}el.textContent="";let i=0;TY=setInterval(()=>{i+=2;el.textContent=txt.slice(0,i);if(i>=txt.length)clearInterval(TY)},22);el.onclick=()=>{clearInterval(TY);el.textContent=txt}}
+function starsHtml(n,cls){return `<span class="${cls}">${[1,2,3].map(i=>IC.star.replace("<svg",`<svg class="${i<=n?"on":""}"`)).join("")}</span>`}
+function setSun(p){$("#sunG").style.transform=`translateY(${-p*330}px)`;$("#day").style.opacity=(p*.92).toFixed(2);$("#sunbar").style.width=(p*100)+"%"}
+
+/* title */
+$("#chips").innerHTML=[IDENT.mapel,"Kelas "+IDENT.kelas,"5 misi · "+TOTALQ+" tantangan"].map(c=>`<span class="chip">${c}</span>`).join("");
+$("#materi").innerHTML=`Materi: <b>${IDENT.materi}</b>`;
+$("#bStart").addEventListener("click",()=>{snd("tap");$("#iKelas").value=$("#iKelas").value||IDENT.kelas;show("s-form");setTimeout(()=>$("#iNama").focus(),50)});
+document.querySelectorAll(".mute").forEach(b=>b.addEventListener("click",()=>{S.mute=!S.mute;updMute();snd("tap")}));
+
+/* form */
+$("#fForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#iNama").value.trim(),k=$("#iKelas").value.trim(),a=$("#iAbsen").value.trim();if(n.length<2){$("#fErr").textContent="Nama lengkap wajib diisi.";$("#iNama").focus();return}if(!k){$("#fErr").textContent="Kelas wajib diisi.";$("#iKelas").focus();return}$("#fErr").textContent="";S.p={nama:n,kelas:k,absen:a};snd("tap");story=0;showStory()});
+function showStory(){$("#stAv").innerHTML=AV.fajar;$("#stWho").innerHTML="<b>Kak Fajar</b>Ketua Rohis";type($("#stSay"),PROLOG[story].replace("{n}",S.p.nama.split(" ")[0]));$("#stNext").textContent=story<PROLOG.length-1?"Lanjut":"Buka peta misi";show("s-story")}
+$("#stNext").addEventListener("click",()=>{snd("tap");story++;if(story<PROLOG.length)showStory();else{renderMap();show("s-map")}});
+
+/* map */
+function openIdx(){let o=0;while(o<M.length&&S.res[M[o].id])o++;return o}
+function renderMap(){const o=openIdx(),all=o>=M.length;setSun(o/M.length);$("#clock").textContent=all?"09.30":M[o].jam;$("#mapHello").textContent=all?"Semua Kepingan Cahaya terkumpul!":`Kepingan Cahaya: ${o} dari ${M.length}`;
+$("#mapList").innerHTML=M.map((m,i)=>{const r=S.res[m.id],st=r?"done":i===o?"open":"lock";return `<button class="stop ${st}${m.boss?" fin":""}" data-i="${i}" ${st==="open"?"":"disabled"}><span class="sic">${r?IC.check:st==="lock"?IC.lock:PL[i]}</span><span class="stx"><small>${m.no} · ${m.lvl}</small><b>${m.name}</b><em>${m.skill} · ${m.jam}</em></span>${r?starsHtml(r.stars,"stars"):st==="open"?'<span class="go">Mulai</span>':"<span></span>"}</button>`}).join("");
+$("#toRapor").hidden=!all}
+$("#mapList").addEventListener("click",e=>{const b=e.target.closest(".stop");if(!b||b.disabled)return;snd("tap");brief(+b.dataset.i)});
+$("#toRapor").addEventListener("click",()=>{renderResult();show("s-result")});
+
+/* brief */
+let BI=0;
+function brief(i){BI=i;const m=M[i],np=NPC[m.npc],nb=m.qs.filter(q=>q.t==="bs").length;$("#bLvl").textContent=m.no+" · "+m.lvl;$("#bName").textContent=m.name;$("#bPlace").textContent=m.place+" · pukul "+m.jam;$("#bAv").innerHTML=AV[m.npc];$("#bWho").innerHTML=`<b>${np.n}</b>${np.r}`;
+$("#bRules").innerHTML=`<div><b>${m.qs.length}</b>tantangan</div><div><b>${m.qs.length-nb}·${nb}</b>PG · B/S</div><div><b>3</b>nyawa</div>`;show("s-brief");type($("#bSay"),m.story)}
+$("#bBack").addEventListener("click",()=>{renderMap();show("s-map")});
+$("#bGo").addEventListener("click",()=>{snd("tap");startMission(BI)});
+
+/* play */
+function startMission(i){const m=M[i];P={m,list:shuffle(m.qs),i:0,hearts:3,streak:0,c:0,pts:0,wrong:[],marks:[],boss:m.qs.length,ans:false,help:false};$("#play").classList.toggle("boss",!!m.boss);show("s-play");renderQ()}
+function renderHud(){$("#hMis").textContent=P.m.no+" · "+P.m.name;$("#hearts").innerHTML=[0,1,2].map(i=>`<span class="hrt ${i<P.hearts?"":"off"}">${IC.heart}</span>`).join("");$("#hScore").textContent=S.score;
+$("#prog").innerHTML=P.list.map((_,i)=>`<i class="${i<P.marks.length?(P.marks[i]?"ok":"no"):i===P.i?"n":""}"></i>`).join("");
+if(P.m.boss){const p=P.boss/P.list.length;$("#bossFill").style.width=(p*100)+"%";$("#fog").style.opacity=(.12+.62*p).toFixed(2)}else $("#fog").style.opacity=0}
+function renderQ(){const q=P.list[P.i];P.ans=false;P.help=false;const kind=q.t==="bs"?"Benar atau salah":q.c?"Studi kasus":"Pilihan ganda",cls=q.t==="bs"?"bs":q.c?"c":"";
+let h=`<div class="qmeta"><span class="tag ${cls}">${kind}</span><span>Tantangan ${P.i+1} dari ${P.list.length}</span></div>`;
+if(q.ar)h+=`<p class="ar" dir="rtl" lang="ar">${q.ar}</p>`;
+h+=`<p class="qtext">${esc(q.q)}</p>`;
+if(q.t==="bs")h+=`<div class="bsrow"><button class="bsb t" data-v="1">${IC.check}Benar<small>tekan B</small></button><button class="bsb f" data-v="0">${IC.x}Salah<small>tekan S</small></button></div>`;
+else{P.order=shuffle([0,1,2,3]);h+=`<div class="opts">${P.order.map((k,n)=>`<button class="opt" data-k="${k}"><b>${"ABCD"[n]}</b><span>${esc(q.o[k])}</span></button>`).join("")}</div>`}
+const qc=$("#qcard");qc.innerHTML=h;qc.scrollTop=0;updPow();renderHud()}
+function updPow(){const q=P&&P.list[P.i];$("#hintN").textContent=S.power.hint;$("#hint").disabled=!q||P.ans||P.help||S.power.hint<1||q.t==="bs"}
+$("#qcard").addEventListener("click",e=>{if(!P||P.ans)return;const o=e.target.closest(".opt");if(o&&!o.disabled){answer(+o.dataset.k);return}const b=e.target.closest(".bsb");if(b&&!b.disabled)answer(b.dataset.v==="1")});
+function answer(v){if(!P||P.ans)return;P.ans=true;const q=P.list[P.i];let ok,yours,right;
+if(q.t==="bs"){ok=v===q.a;right=q.a?"Benar":"Salah";yours=v?"Benar":"Salah";document.querySelectorAll(".bsb").forEach(b=>{const bv=b.dataset.v==="1";b.disabled=true;b.classList.add(bv===q.a?"ok":bv===v?"bad":"dim")})}
+else{ok=v===0;right=q.o[0];yours=q.o[v];document.querySelectorAll(".opt").forEach(b=>{const k=+b.dataset.k;b.disabled=true;b.classList.add(k===0?"ok":k===v?"bad":"dim")})}
+let g;if(ok){P.streak++;P.c++;g=100+Math.min((P.streak-1)*20,100);if(P.help)g=Math.round(g/2);P.boss--;snd("ok");burst()}
+else{P.streak=0;g=-25;P.hearts--;P.wrong.push({q:q.q,y:yours,r:right,e:q.e});snd("bad");const qc=$("#qcard");qc.classList.remove("shake");void qc.offsetWidth;qc.classList.add("shake")}
+P.marks.push(ok);P.pts+=g;S.score=Math.max(0,S.score+g);renderHud();floatPts(g);updPow();
+const fb=$("#fb");fb.className="sheet up "+(ok?"good":"nope");
+const head=ok?(P.m.boss?"Kabut Lalai melemah!":pick(OKS)):pick(NOS);
+$("#fbHead").innerHTML=`${ok?IC.check:IC.x}<span>${head}</span><em>${g>0?"+":""}${g}</em>`;
+$("#fbBody").innerHTML=(ok?"":`<p class="fbr">Jawaban tepat: <b>${esc(right)}</b></p>`)+(ok&&P.streak>1?`<p><b>Benar ${P.streak} kali beruntun!</b></p>`:"")+`<p>${esc(q.e)}</p>`;
+$("#fbNext").textContent=P.i+1<P.list.length?"Lanjut":"Selesaikan misi";setTimeout(()=>$("#fbNext").focus({preventScroll:true}),60)}
+function floatPts(g){const s=document.createElement("span");s.className="float";s.style.color=g>0?"var(--ok)":"#c0392b";s.textContent=(g>0?"+":"")+g;$("#hScoreBox").appendChild(s);setTimeout(()=>s.remove(),1000)}
+function burst(){if(reduce)return;const r=$("#qcard").getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/3,cols=["#ffb020","#22a35a","#ef5b5b","#4fb0ea","#ffd25e"];for(let i=0;i<20;i++){const c=document.createElement("i");c.className="cf";c.style.left=cx+"px";c.style.top=cy+"px";c.style.background=cols[i%5];c.style.setProperty("--dx",(Math.random()*260-130)+"px");c.style.setProperty("--dy",(Math.random()*-200-20)+"px");c.style.setProperty("--r",(Math.random()*720-360)+"deg");document.body.appendChild(c);setTimeout(()=>c.remove(),950)}}
+$("#fbNext").addEventListener("click",next);
+function next(){if(!P||!P.ans)return;$("#fb").className="sheet";snd("tap");if(P.hearts<=0){$("#rsAv").innerHTML=AV.fajar;$("#rsSay").textContent=pick(RESC);$("#rescue").classList.add("on");setTimeout(()=>$("#rsGo").focus(),60);return}adv()}
+function adv(){P.i++;if(P.i>=P.list.length)endMission();else renderQ()}
+$("#rsGo").addEventListener("click",()=>{$("#rescue").classList.remove("on");P.hearts=1;P.pts-=50;S.score=Math.max(0,S.score-50);snd("tap");adv()});
+$("#hint").addEventListener("click",()=>{const q=P&&P.list[P.i];if(!q||P.ans||P.help||S.power.hint<1||q.t==="bs")return;S.power.hint--;P.help=true;const out=shuffle([1,2,3]).slice(0,2);document.querySelectorAll(".opt").forEach(b=>{if(out.includes(+b.dataset.k)){b.classList.add("gone");b.disabled=true}});snd("tap");updPow()});
+function endMission(){const n=P.list.length,acc=P.c/n,st=acc>=.85?3:acc>=.6?2:1,m=P.m;S.res[m.id]={c:P.c,n,pts:P.pts,stars:st,wrong:P.wrong};snd("win");
+const done=openIdx();
+if(m.boss){$("#dTitle").textContent=acc>=.6?"Kabut Lalai sirna!":"Kabut Lalai menipis";$("#dSub").textContent=acc>=.6?"Madrasah kembali terang. Budaya saling mengingatkan hidup lagi!":"Cahaya sudah muncul, tapi masih perlu belajar lagi supaya kabutnya hilang total.";$("#dNext").textContent="Lihat rapor petualangan"}
+else{$("#dTitle").textContent="Misi selesai!";$("#dSub").textContent=m.no+" · "+m.name;$("#dNext").textContent="Kembali ke peta"}
+$("#dStars").innerHTML=[1,2,3].map(i=>IC.star.replace("<svg",`<svg class="${i<=st?"on":""}"`)).join("");
+$("#dStats").innerHTML=`<div><b>${P.c}/${n}</b>benar</div><div><b>${Math.round(acc*100)}%</b>akurasi</div><div><b>${P.pts>0?"+":""}${P.pts}</b>poin misi</div>`;
+$("#dShard").innerHTML=`${IC.shard}<span>Kepingan Cahaya ${done} dari ${M.length} didapat</span>`;
+P=null;show("s-done")}
+$("#dNext").addEventListener("click",()=>{snd("tap");if(openIdx()>=M.length){renderResult();show("s-result")}else{renderMap();show("s-map")}});
+
+/* result */
+function totals(){let c=0,n=0;M.forEach(m=>{const r=S.res[m.id];if(r){c+=r.c;n+=r.n}});return{c,n:n||TOTALQ,nilai:Math.round(c/(n||TOTALQ)*100)}}
+function predikat(v){return v>=86?["Sangat Baik","Penjaga Cahaya Dhuha. Pemahamanmu menyeluruh, dari konsep sampai penerapan."]:v>=71?["Baik","Sahabat Pengingat. Sebagian besar materi sudah kamu kuasai."]:v>=56?["Cukup","Penjelajah Pagi. Ulangi bagian yang masih keliru, ya."]:["Perlu Bimbingan","Peneliti Pemula. Pelajari lagi materinya bersama gurumu."]}
+function kode(){const s=[S.p.nama,S.p.kelas,S.p.absen,totals().nilai,S.score].join("|");let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36).toUpperCase().padStart(6,"0").slice(-6)}
+function renderResult(){const t=totals(),pr=predikat(t.nilai),stars=M.reduce((s,m)=>s+(S.res[m.id]?S.res[m.id].stars:0),0);
+$("#rWho").textContent=`${S.p.nama} · Kelas ${S.p.kelas}${S.p.absen?" · Absen "+S.p.absen:""}`;$("#rNilai").textContent=t.nilai;$("#rPred").textContent=pr[0];$("#rDesc").textContent=pr[1];
+$("#rStats").innerHTML=`<div><b>${t.c}/${t.n}</b>benar</div><div><b>${S.score}</b>skor game</div><div><b>${stars}/15</b>bintang</div>`;
+$("#rBars").innerHTML=M.map(m=>{const r=S.res[m.id]||{c:0,n:m.qs.length},p=Math.round(r.c/r.n*100);return `<div class="bar"><b>${m.no} · ${m.skill}</b><span>${r.c}/${r.n}</span><div class="tr"><i class="${p>=85?"":p>=60?"mid":"low"}" style="width:${p}%"></i></div></div>`}).join("");
+$("#rKode").textContent=kode();
+const w=M.flatMap(m=>(S.res[m.id]?S.res[m.id].wrong:[]).map(x=>({...x,m:m.no})));
+$("#rRevT").textContent=w.length?`Pembahasan jawaban yang keliru (${w.length})`:"Semua jawaban benar. MasyaAllah!";
+$("#rList").innerHTML=w.map(x=>`<li><p><b>${x.m}:</b> ${esc(x.q)}</p><p class="y">Jawabanmu: ${esc(x.y)}</p><p class="r">Jawaban tepat: ${esc(x.r)}</p><p>${esc(x.e)}</p></li>`).join("");
+$("#rNote").textContent="";$("#copyBox").hidden=true}
+function resText(){const t=totals(),d=new Date(),pad=x=>String(x).padStart(2,"0");return ["DHUHA QUEST · Rapor Petualangan",`${IDENT.mapel} · ${IDENT.materi}`,`Nama: ${S.p.nama}`,`Kelas: ${S.p.kelas}${S.p.absen?" | Absen: "+S.p.absen:""}`,`Nilai pemahaman: ${t.nilai} (${predikat(t.nilai)[0]})`,`Benar: ${t.c}/${t.n} | Skor game: ${S.score}`,...M.map(m=>{const r=S.res[m.id]||{c:0,n:m.qs.length};return `- ${m.no} (${m.skill}): ${r.c}/${r.n}`}),`Kode verifikasi: ${kode()}`,`Waktu: ${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}.${pad(d.getMinutes())}`].join("\n")}
+$("#rCopy").addEventListener("click",async()=>{const t=resText();try{await navigator.clipboard.writeText(t);$("#rNote").textContent="Hasil tersalin. Tempel dan kirim ke gurumu, ya!"}catch(e){const b=$("#copyBox");b.hidden=false;b.value=t;b.focus();b.select();$("#rNote").textContent="Salin teks di bawah ini secara manual."}});
+$("#rAgain").addEventListener("click",()=>{S={p:null,res:{},score:0,power:{hint:2},mute:S.mute};setSun(0);snd("tap");show("s-title")});
+
+/* keyboard */
+document.addEventListener("keydown",e=>{if(!$("#s-play").classList.contains("on")||!P)return;if($("#rescue").classList.contains("on"))return;const k=e.key.toLowerCase();
+if(!P.ans){const q=P.list[P.i];if(q.t==="bs"){if(k==="b")answer(true);else if(k==="s")answer(false)}else{const n="1234".indexOf(k)>-1?"1234".indexOf(k):"abcd".indexOf(k);if(n>-1){const b=document.querySelectorAll(".opt")[n];if(b&&!b.disabled)answer(+b.dataset.k)}}}});
+
+/* boot */
+window.claude?.hot?.snapshot?.(()=>({p:S.p,res:S.res,score:S.score,power:S.power,mute:S.mute}));
+function start(d){updMute();if(d&&d.p){S={...S,...d,power:{hint:(d.power&&d.power.hint)??2},res:d.res||{}};if(openIdx()>=M.length){renderResult();show("s-result")}else{renderMap();show("s-map")}}else{setSun(0);show("s-title")}}
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+}
+</script>
+</body>
+</html>
